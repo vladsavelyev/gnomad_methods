@@ -81,7 +81,10 @@ def public_release(data_type: str) -> VersionedTableResource:
     return VersionedTableResource(
         current_release,
         {
-            release: TableResource(path=_public_release_ht_path(data_type, release))
+            release: TableResource(
+                path=_public_release_ht_path(data_type, release),
+                gnomad_bucket="gnomad-public-requester-pays",
+            )
             for release in releases
         },
     )
@@ -109,7 +112,10 @@ def coverage(data_type: str) -> VersionedTableResource:
     return VersionedTableResource(
         current_release,
         {
-            release: TableResource(path=_public_coverage_ht_path(data_type, release))
+            release: TableResource(
+                path=_public_coverage_ht_path(data_type, release),
+                gnomad_bucket="gnomad-public-requester-pays",
+            )
             for release in releases
         },
     )
