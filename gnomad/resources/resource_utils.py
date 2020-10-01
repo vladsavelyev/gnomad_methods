@@ -26,6 +26,9 @@ def get_resource_url(
 
     default_resource_provider = gnomad_resource_configuration.default_resource_provider
 
+    if default_resource_provider == GnomadResourceProvider.GOOGLE_CLOUD_PUBLIC_DATASETS:
+        return f"gs://gcp-public-data--gnomad{path}"
+
     if default_resource_provider == GnomadResourceProvider.GNOMAD:
         return f"gs://{gnomad_bucket}{path}"
 
