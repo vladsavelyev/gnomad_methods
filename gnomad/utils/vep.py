@@ -1,7 +1,7 @@
 from typing import Union
 
 import hail as hl
-from gnomad.resources.resource_utils import DataException
+from gnomad.resources.resource_utils import DataException, get_resource_url
 
 # Note that this is the current as of v81 with some included for backwards compatibility (VEP <= 75)
 CSQ_CODING_HIGH_IMPACT = [
@@ -65,11 +65,17 @@ CSQ_ORDER = (
 VEP_REFERENCE_DATA = {
     "GRCh37": {
         "vep_config": "file:///vep_data/vep-gcloud.json",
-        "all_possible": "gs://gnomad-public-requester-pays/resources/context/grch37_context_vep_annotated.ht",
+        "all_possible": get_resource_url(
+            "/resources/context/grch37_context_vep_annotated.ht",
+            gnomad_bucket="gnomad-public-requester-pays",
+        ),
     },
     "GRCh38": {
         "vep_config": "file:///vep_data/vep-gcloud.json",
-        "all_possible": "gs://gnomad-public-requester-pays/resources/context/grch38_context_vep_annotated.ht",
+        "all_possible": get_resource_url(
+            "/resources/context/grch38_context_vep_annotated.ht",
+            gnomad_bucket="gnomad-public-requester-pays",
+        ),
     },
 }
 
