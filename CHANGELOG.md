@@ -17,6 +17,8 @@
 * Fix for error in `compute_stratified_sample_qc` where `gt_expr` caused error [(#259)](https://github.com/broadinstitute/gnomad_methods/pull/259)
 * Add reference genome to call of `has_liftover` in `get_liftover_genome` [(#259)](https://github.com/broadinstitute/gnomad_methods/pull/259)
 * Added fix for MQ calculation in `_get_info_agg_expr`, switched `RAW_MQ` and `MQ_DP` in calculation [(#262)](https://github.com/broadinstitute/gnomad_methods/pull/262)
+* Added support for loading resources from alternate sources [(#265)](https://github.com/broadinstitute/gnomad_methods/pull/265)
+* Default to loading resources from Google Cloud Public Datasets [(#265)](https://github.com/broadinstitute/gnomad_methods/pull/265)
 
 ## Version 0.4.0 - July 9th, 2020
 
