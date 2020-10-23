@@ -116,10 +116,7 @@ class SlackClient:
             to = [to]
 
         for channel_or_user in to:
-            if channel_or_user.startswith("@"):
-                channel = self._get_direct_message_channel(channel_or_user)
-            else:
-                channel = channel_or_user
+            channel = channel_or_user
 
             if len(message) > 4000:
                 self._client.files_upload(
