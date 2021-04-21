@@ -329,7 +329,6 @@ def test_model(
 def apply_rf_model(
     ht: hl.Table,
     rf_model: pyspark.ml.PipelineModel,
-    features: List[str],
     label: str,
     probability_col_name: str = "rf_probability",
     prediction_col_name: str = "rf_prediction",
@@ -339,13 +338,14 @@ def apply_rf_model(
 
     :param ht: Input HT
     :param rf_model: Random Forest pipeline model
-    :param features: List of feature columns in the pipeline. !Should match the model list of features!
     :param label: Column containing the labels. !Should match the model labels!
     :param probability_col_name: Name of the column that will store the RF probabilities
     :param prediction_col_name: Name of the column that will store the RF predictions
     :return: Table with RF columns
     """
     logger.info("Applying RF model.")
+
+    features = hl.eval(ht.features)
 
     check_ht_fields_for_spark(ht, features + [label])
 
