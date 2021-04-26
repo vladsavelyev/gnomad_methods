@@ -397,7 +397,6 @@ def apply_rf_model(
     ht = ht.filter(hl.set(['FP', 'TP']).contains(ht[prediction_col_name]))
 
     ht = ht.key_by(*ht_keys)
-    ht = ht.drop(index_name)
 
     return ht
 
