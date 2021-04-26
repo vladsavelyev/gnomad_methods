@@ -394,6 +394,7 @@ def apply_rf_model(
             prediction_col_name: rf_ht[ht[index_name]]["predictedLabel"],
         }
     )
+    ht = ht.filter(hl.set(['FP', 'TP']).contains(ht[prediction_col_name]))
 
     ht = ht.key_by(*ht_keys)
     ht = ht.drop(index_name)
