@@ -301,9 +301,9 @@ def test_model(
     """
     ht = apply_rf_model(
         ht.filter(hl.is_defined(ht[label])),
-        rf_model,
-        features,
-        label,
+        rf_model=rf_model,
+        features=features,
+        label=label,
         prediction_col_name=prediction_col_name,
     )
 
@@ -329,6 +329,7 @@ def test_model(
 def apply_rf_model(
     ht: hl.Table,
     rf_model: pyspark.ml.PipelineModel,
+    features,
     label: str,
     probability_col_name: str = "rf_probability",
     prediction_col_name: str = "rf_prediction",
@@ -344,8 +345,6 @@ def apply_rf_model(
     :return: Table with RF columns
     """
     logger.info("Applying RF model.")
-
-    features = hl.eval(ht.features)
 
     check_ht_fields_for_spark(ht, features + [label])
 
