@@ -422,6 +422,10 @@ def train_rf_model(
         )
 
     features_importance = get_features_importance(rf_model)
+    logger.info(f'features_importance: {features_importance}')
+    logger.info(f'rf_features: {rf_features}')
+    logger.info(f'test_results: {test_results}')
+    ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/train_rf_model_checkpoint.ht', overwrite=True)
     ht = ht.select_globals(
         features_importance=features_importance,
         features=rf_features,
