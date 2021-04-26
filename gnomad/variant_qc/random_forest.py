@@ -356,6 +356,7 @@ def apply_rf_model(
 
     ht_keys = ht.key
     ht = ht.key_by(index_name)
+    ht = ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred-before-ht_to_rf_df.ht', overwrite=True)
 
     df = ht_to_rf_df(ht, features, label, index_name)
 
@@ -367,7 +368,7 @@ def apply_rf_model(
 
         return udf(to_array_, ArrayType(DoubleType()))(col)
 
-    # Note: SparkSession is needed to write DF to disk before converting to HT;
+    # Note: SparkSession is needed to write DF to disk before converting to HT; 
     # hail currently fails without intermediate write
     spark = SparkSession.builder.getOrCreate()
     rf_df.withColumn("probability", to_array(col("probability"))).select(
@@ -375,7 +376,8 @@ def apply_rf_model(
     ).write.mode("overwrite").save("rf_probs.parquet")
     rf_df = spark.read.format("parquet").load("rf_probs.parquet")
     rf_ht = hl.Table.from_spark(rf_df)
-    rf_ht = rf_ht.checkpoint("/tmp/rf_raw_pred.ht", overwrite=True)
+    # rf_ht = rf_ht.checkpoint("gs:///rf_raw_pred.ht", overwrite=True)
+    rf_ht = rf_ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred.ht', overwrite=True)
     rf_ht = rf_ht.key_by(index_name)
 
     ht = ht.annotate(
