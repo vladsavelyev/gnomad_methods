@@ -15,7 +15,7 @@ with open("requirements.txt", "r") as requirements_file:
 
 setuptools.setup(
     name="cpg-gnomad",
-    version="0.4.4",
+    version="0.4.5",
     author="The Genome Aggregation Database",
     author_email="gnomad@broadinstitute.org",
     description="Hail utilities for the Genome Aggregation Database",
