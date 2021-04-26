@@ -382,7 +382,7 @@ def apply_rf_model(
 
     model_path = 'gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf.model'
     logger.info(f'Saving tmp RF model to {model_path}')
-    save_model(model, model_path, overwrite=overwrite)
+    save_model(rf_model, model_path, overwrite=overwrite)
 
     ht = ht.annotate(
         **{
