@@ -358,12 +358,12 @@ def apply_rf_model(
 
     ht_keys = ht.key
     ht = ht.key_by(index_name)
-    ht = ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred-before-ht_to_rf_df.ht', overwrite=True)
+    # ht = ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred-before-ht_to_rf_df.ht', overwrite=True)
 
     df = ht_to_rf_df(ht, features, label, index_name)
 
     rf_df = rf_model.transform(df)
-    
+
     def to_array(col):
         def to_array_(v):
             return v.toArray().tolist()
@@ -378,13 +378,12 @@ def apply_rf_model(
     ).write.mode("overwrite").save("rf_probs.parquet")
     rf_df = spark.read.format("parquet").load("rf_probs.parquet")
     rf_ht = hl.Table.from_spark(rf_df)
-    # rf_ht = rf_ht.checkpoint("gs:///rf_raw_pred.ht", overwrite=True)
-    rf_ht = rf_ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred.ht', overwrite=True)
+    # rf_ht = rf_ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred.ht', overwrite=True)
     rf_ht = rf_ht.key_by(index_name)
 
-    model_path = 'gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf.model'
-    logger.info(f'Saving tmp RF model to {model_path}')
-    save_model(rf_model, model_path, overwrite=True)
+    # model_path = 'gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf.model'
+    # logger.info(f'Saving tmp RF model to {model_path}')
+    # save_model(rf_model, model_path, overwrite=True)
 
     ht = ht.annotate(
         **{
