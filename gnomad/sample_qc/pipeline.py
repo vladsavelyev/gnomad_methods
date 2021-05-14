@@ -254,7 +254,10 @@ def annotate_sex(
     logger.info("Imputing sex chromosome ploidies...")
     if is_sparse:
         ploidy_ht = impute_sex_ploidy(
-            mt, excluded_intervals, included_intervals, normalization_contig
+            mt,
+            excluded_intervals,
+            included_intervals,
+            normalization_contig,
         )
     else:
         raise NotImplementedError(
