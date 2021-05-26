@@ -118,16 +118,22 @@ def create_binned_ht(
 
 
 def score_bin_agg(
-    ht: hl.GroupedTable, fam_stats_ht: hl.Table
+    ht: hl.GroupedTable, fam_stats_ht: Optional[hl.Table]
 ) -> Dict[str, hl.expr.Aggregation]:
     """
-    Make dict of aggregations for min/max of score, number of ClinVar variants, number of truth variants, and family statistics.
+    Default aggregation function to add aggregations for min/max of score, number
+    of ClinVar variants, number of truth variants (omni, mills, hapmap, and kgp_phase1),
+    and family statistics.
 
     .. note::
 
-        This function uses `ht._parent` to get the origin Table from the GroupedTable for the aggregation
+        This function uses `ht._parent` to get the origin Table from the GroupedTable 
+        for the aggregation
 
-    This can easily be combined with the GroupedTable returned by `compute_grouped_binned_ht`, For example:
+    This can easily be combined with the GroupedTable returned by 
+    `compute_grouped_binned_ht`
+
+    Example:
 
     .. code-block:: python
 
@@ -146,8 +152,10 @@ def score_bin_agg(
             - negative_train_site
             - ac_raw - expected that this is the raw allele count before adj filtering
             - ac - expected that this is the allele count after adj filtering
-            - ac_qc_samples_unrelated_raw - allele count before adj filtering for unrelated samples passing sample QC
-            - info - struct that includes QD, FS, and MQ in order to add an annotation for fail_hard_filters
+            - ac_qc_samples_unrelated_raw - allele count before adj filtering for
+              unrelated samples passing sample QC
+            - info - struct that includes QD, FS, and MQ in order to add an annotation 
+              for fail_hard_filters
 
         In truth_ht:
             - omni
@@ -192,6 +200,7 @@ def score_bin_agg(
     :param fam_stats_ht: Path to family statistics HT
     :return: a dictionary containing aggregations to perform on ht
     """
+    
     # Annotate binned table with the evaluation data
     ht = ht._parent
     indel_length = hl.abs(ht.alleles[0].length() - ht.alleles[1].length())
@@ -207,9 +216,8 @@ def score_bin_agg(
         if build == "GRCh37"
         else grch38_resources.reference_data.get_truth_ht()
     )[ht.key]
-    fam = fam_stats_ht[ht.key]
-
-    return dict(
+    
+    result = dict(
         min_score=hl.agg.min(ht.score),
         max_score=hl.agg.max(ht.score),
         n=hl.agg.count(),
@@ -226,29 +234,36 @@ def score_bin_agg(
         n_pos_train=hl.agg.count_where(ht.positive_train_site),
         n_neg_train=hl.agg.count_where(ht.negative_train_site),
         n_clinvar=hl.agg.count_where(hl.is_defined(clinvar)),
-        n_de_novos_singleton_adj=hl.agg.filter(
-            ht.ac == 1, hl.agg.sum(fam.n_de_novos_adj)
-        ),
-        n_de_novo_singleton=hl.agg.filter(
-            ht.ac_raw == 1, hl.agg.sum(fam.n_de_novos_raw)
-        ),
-        n_de_novos_adj=hl.agg.sum(fam.n_de_novos_adj),
-        n_de_novo=hl.agg.sum(fam.n_de_novos_raw),
-        n_trans_singletons=hl.agg.filter(
-            ht.ac_raw == 2, hl.agg.sum(fam.n_transmitted_raw)
-        ),
-        n_untrans_singletons=hl.agg.filter(
-            (ht.ac_raw < 3) & (ht.ac_qc_samples_unrelated_raw == 1),
-            hl.agg.sum(fam.n_untransmitted_raw),
-        ),
-        n_train_trans_singletons=hl.agg.filter(
-            (ht.ac_raw == 2) & ht.positive_train_site, hl.agg.sum(fam.n_transmitted_raw)
-        ),
         n_omni=hl.agg.count_where(truth_data.omni),
         n_mills=hl.agg.count_where(truth_data.mills),
         n_hapmap=hl.agg.count_where(truth_data.hapmap),
         n_kgp_phase1_hc=hl.agg.count_where(truth_data.kgp_phase1_hc),
     )
+    
+    if trio_stats_ht is not None:
+        fam = fam_stats_ht[ht.key]
+        result.update(dict(
+            n_de_novos_singleton_adj=hl.agg.filter(
+                ht.ac == 1, hl.agg.sum(fam.n_de_novos_adj)
+            ),
+            n_de_novo_singleton=hl.agg.filter(
+                ht.ac_raw == 1, hl.agg.sum(fam.n_de_novos_raw)
+            ),
+            n_de_novos_adj=hl.agg.sum(fam.n_de_novos_adj),
+            n_de_novo=hl.agg.sum(fam.n_de_novos_raw),
+            n_trans_singletons=hl.agg.filter(
+                ht.ac_raw == 2, hl.agg.sum(fam.n_transmitted_raw)
+            ),
+            n_untrans_singletons=hl.agg.filter(
+                (ht.ac_raw < 3) & (ht.ac_qc_samples_unrelated_raw == 1),
+                hl.agg.sum(fam.n_untransmitted_raw),
+            ),
+            n_train_trans_singletons=hl.agg.filter(
+                (ht.ac_raw == 2) & ht.positive_train_site, hl.agg.sum(fam.n_transmitted_raw)
+            )
+        ))
+
+    return result
 
 
 def generate_trio_stats(
