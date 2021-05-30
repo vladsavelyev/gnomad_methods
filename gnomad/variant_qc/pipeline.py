@@ -240,7 +240,7 @@ def score_bin_agg(
         n_kgp_phase1_hc=hl.agg.count_where(truth_data.kgp_phase1_hc),
     )
     
-    if trio_stats_ht is not None:
+    if fam_stats_ht is not None:
         fam = fam_stats_ht[ht.key]
         result.update(dict(
             n_de_novos_singleton_adj=hl.agg.filter(
