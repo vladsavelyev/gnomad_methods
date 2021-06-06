@@ -121,14 +121,11 @@ def score_bin_agg(
     ht: hl.GroupedTable, fam_stats_ht: Optional[hl.Table]
 ) -> Dict[str, hl.expr.Aggregation]:
     """
-    Default aggregation function to add aggregations for min/max of score, number
-    of ClinVar variants, number of truth variants (omni, mills, hapmap, and kgp_phase1),
-    and family statistics.
+    Make dict of aggregations for min/max of score, number of ClinVar variants, number of truth variants, and family statistics.
 
     .. note::
 
-        This function uses `ht._parent` to get the origin Table from the GroupedTable 
-        for the aggregation
+        This function uses `ht._parent` to get the origin Table from the GroupedTable for the aggregation
 
     This can easily be combined with the GroupedTable returned by 
     `compute_grouped_binned_ht`
@@ -152,10 +149,8 @@ def score_bin_agg(
             - negative_train_site
             - ac_raw - expected that this is the raw allele count before adj filtering
             - ac - expected that this is the allele count after adj filtering
-            - ac_qc_samples_unrelated_raw - allele count before adj filtering for
-              unrelated samples passing sample QC
-            - info - struct that includes QD, FS, and MQ in order to add an annotation 
-              for fail_hard_filters
+            - ac_qc_samples_unrelated_raw - allele count before adj filtering for unrelated samples passing sample QC
+            - info - struct that includes QD, FS, and MQ in order to add an annotation for fail_hard_filters
 
         In truth_ht:
             - omni
@@ -437,15 +432,6 @@ def train_rf_model(
         )
 
     features_importance = get_features_importance(rf_model)
-    logger.info(f'test_results: {test_results}')
-    # INFO (gnomad.variant_qc.pipeline 424): test_results: [
-    # Struct(rf_prediction='FP', rf_label='FP', n=16644), 
-    # Struct(rf_prediction='FP', rf_label='TP', n=1173), 
-    # Struct(rf_prediction='TP', rf_label='FP', n=195), 
-    # Struct(rf_prediction='TP', rf_label='TP', n=52598), 
-    # Struct(rf_prediction=None, rf_label='FP', n=66), 
-    # Struct(rf_prediction=None, rf_label='TP', n=653)]
-    
     ht = ht.select_globals(
         features_importance=features_importance,
         features=rf_features,

@@ -176,14 +176,11 @@ def compute_grouped_binned_ht(
 
     .. note::
 
-        If performing an aggregation following this grouping (such as `score_bin_agg`)
-        then the aggregation
-        function will need to use `ht._parent` to get the origin Table from the
-        GroupedTable for the aggregation
+        If performing an aggregation following this grouping (such as `score_bin_agg`) then the aggregation
+        function will need to use `ht._parent` to get the origin Table from the GroupedTable for the aggregation
 
     :param bin_ht: Input Table with a `bin_id` annotation
-    :param checkpoint_path: If provided an intermediate checkpoint table is created
-           with all required annotations before shuffling.
+    :param checkpoint_path: If provided an intermediate checkpoint table is created with all required annotations before shuffling.
     :return: Table grouped by bins(s)
     """
     # Explode the rank table by bin_id

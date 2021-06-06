@@ -171,11 +171,3 @@ def slack_notifications(token: str, to: typing.Union[str, typing.Iterable[str]])
         )
 
         raise
-
-
-def try_slack(channel, main, args):
-    token = os.environ.get("SLACK_API_TOKEN")
-    assert token, ('Please, set the SLACK_API_TOKEN environment'
-                   ' variable to use slack notifications')
-    with slack_notifications(token, channel):
-        main(args)

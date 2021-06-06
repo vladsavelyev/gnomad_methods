@@ -266,6 +266,7 @@ def get_features_importance(
         x[: -len("_indexed")] if x.endswith("_indexed") else x
         for x in rf_pipeline.stages[assembler_index].getInputCols()
     ]
+
     logger.info(f'Getting feature importance for features {feature_names}')
     logger.info(f'Features: {rf_pipeline.stages[rf_index].featureImportances}')
     return dict(zip(feature_names, rf_pipeline.stages[rf_index].featureImportances))
@@ -304,9 +305,9 @@ def test_model(
     """
     ht = apply_rf_model(
         ht.filter(hl.is_defined(ht[label])),
-        rf_model=rf_model,
-        features=features,
-        label=label,
+        rf_model,
+        features,
+        label,
         prediction_col_name=prediction_col_name,
     )
 
@@ -332,7 +333,7 @@ def test_model(
 def apply_rf_model(
     ht: hl.Table,
     rf_model: pyspark.ml.PipelineModel,
-    features,
+    features: List[str],
     label: str,
     probability_col_name: str = "rf_probability",
     prediction_col_name: str = "rf_prediction",
@@ -342,6 +343,7 @@ def apply_rf_model(
 
     :param ht: Input HT
     :param rf_model: Random Forest pipeline model
+    :param features: List of feature columns in the pipeline. !Should match the model list of features!
     :param label: Column containing the labels. !Should match the model labels!
     :param probability_col_name: Name of the column that will store the RF probabilities
     :param prediction_col_name: Name of the column that will store the RF predictions
@@ -358,7 +360,6 @@ def apply_rf_model(
 
     ht_keys = ht.key
     ht = ht.key_by(index_name)
-    # ht = ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred-before-ht_to_rf_df.ht', overwrite=True)
 
     df = ht_to_rf_df(ht, features, label, index_name)
 
@@ -370,7 +371,7 @@ def apply_rf_model(
 
         return udf(to_array_, ArrayType(DoubleType()))(col)
 
-    # Note: SparkSession is needed to write DF to disk before converting to HT; 
+    # Note: SparkSession is needed to write DF to disk before converting to HT;
     # hail currently fails without intermediate write
     spark = SparkSession.builder.getOrCreate()
     rf_df.withColumn("probability", to_array(col("probability"))).select(
@@ -378,12 +379,7 @@ def apply_rf_model(
     ).write.mode("overwrite").save("rf_probs.parquet")
     rf_df = spark.read.format("parquet").load("rf_probs.parquet")
     rf_ht = hl.Table.from_spark(rf_df)
-    # rf_ht = rf_ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf_raw_pred.ht', overwrite=True)
     rf_ht = rf_ht.key_by(index_name)
-
-    # model_path = 'gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/rf.model'
-    # logger.info(f'Saving tmp RF model to {model_path}')
-    # save_model(rf_model, model_path, overwrite=True)
 
     ht = ht.annotate(
         **{
@@ -394,9 +390,10 @@ def apply_rf_model(
             prediction_col_name: rf_ht[ht[index_name]]["predictedLabel"],
         }
     )
-    ht = ht.filter(hl.set(['FP', 'TP']).contains(ht[prediction_col_name]))
+    # ht = ht.filter(hl.set(['FP', 'TP']).contains(ht[prediction_col_name]))
 
     ht = ht.key_by(*ht_keys)
+    ht = ht.drop(index_name)
 
     return ht
 
