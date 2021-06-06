@@ -446,7 +446,6 @@ def train_rf_model(
     # Struct(rf_prediction=None, rf_label='FP', n=66), 
     # Struct(rf_prediction=None, rf_label='TP', n=653)]
     
-    ht.checkpoint('gs://cpg-tob-wgs-temporary/joint_vcf/v1/work/variant_qc/train_rf_model_checkpoint.ht', overwrite=True)
     ht = ht.select_globals(
         features_importance=features_importance,
         features=rf_features,
