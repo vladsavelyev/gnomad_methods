@@ -616,8 +616,9 @@ def impute_sex_ploidy(
         logger.info("Contig %s has %d bases for coverage.", contig, contig_size)
         return contig_size
 
-    def get_chr_dp_ann(chrom: str) -> hl.Table:
-        contig_size = get_contig_size(chrom)
+    def get_chr_dp_ann(chrom: str, contig_size: int = None) -> hl.Table:
+        if not contig_size:
+            contig_size = get_contig_size(chrom)
         chr_mt = hl.filter_intervals(mt, [hl.parse_locus_interval(chrom)])
 
         if chrom in ref.x_contigs:
@@ -638,9 +639,9 @@ def impute_sex_ploidy(
             }
         ).cols()
 
-    normalization_chrom_dp = get_chr_dp_ann(normalization_contig)
-    chrX_dp = get_chr_dp_ann(chr_x)
-    chrY_dp = get_chr_dp_ann(chr_y)
+    normalization_chrom_dp = get_chr_dp_ann(normalization_contig, contig_size=60385861)
+    chrX_dp = get_chr_dp_ann(chr_x, contig_size=148308578)
+    chrY_dp = get_chr_dp_ann(chr_y, contig_size=23409260)
 
     ht = normalization_chrom_dp.annotate(
         **chrX_dp[normalization_chrom_dp.key], **chrY_dp[normalization_chrom_dp.key],
