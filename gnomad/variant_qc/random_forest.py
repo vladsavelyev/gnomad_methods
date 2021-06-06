@@ -5,6 +5,8 @@ import logging
 import pprint
 from pprint import pformat
 from typing import Dict, List, Optional, Tuple
+import json
+import traceback
 
 import hail as hl
 import pandas as pd
@@ -520,8 +522,13 @@ def get_rf_runs(rf_json_fp: str) -> Dict:
     :return: Dictionary containing the content of the JSON file, or an empty dictionary if the file wasn't found.
     """
     if file_exists(rf_json_fp):
-        with hl.hadoop_open(rf_json_fp) as f:
-            return json.load(f)
+        try:
+            with hl.hadoop_open(rf_json_fp) as f:
+                return json.load(f)
+        except:
+            traceback.print_exception()
+            logger.error(f'Could not parse runs data from {rf_json_fp}')
+            return {}
     else:
         logger.warning(
             "File %s could not be found. Returning empty RF run hash dict.", rf_json_fp
