@@ -379,7 +379,6 @@ def apply_rf_model(
     ).write.mode("overwrite").save("rf_probs.parquet")
     rf_df = spark.read.format("parquet").load("rf_probs.parquet")
     rf_ht = hl.Table.from_spark(rf_df)
-    rf_ht = rf_ht.checkpoint("/tmp/rf_raw_pred.ht", overwrite=True)
     rf_ht = rf_ht.key_by(index_name)
 
     ht = ht.annotate(
