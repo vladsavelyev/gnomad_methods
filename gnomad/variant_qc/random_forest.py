@@ -264,7 +264,9 @@ def get_features_importance(
         x[: -len("_indexed")] if x.endswith("_indexed") else x
         for x in rf_pipeline.stages[assembler_index].getInputCols()
     ]
-
+    
+    logger.info(f'Getting feature importance for features {feature_names}')
+    logger.info(f'Features: {rf_pipeline.stages[rf_index].featureImportances}')
     return dict(zip(feature_names, rf_pipeline.stages[rf_index].featureImportances))
 
 
