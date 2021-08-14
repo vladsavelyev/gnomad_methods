@@ -126,11 +126,11 @@ def get_qc_mt(
     Create a QC-ready MT.
 
     Keeps the following:
-        - Variants outside known problematic regions
-        - Bi-allelic SNVs only
-        - Variants passing hard thresholds
-        - Variants passing the set call rate and MAF thresholds
-        - Genotypes passing on gnomAD ADJ criteria (GQ>=20, DP>=10, AB>0.2 for hets)
+    - Variants outside known problematic regions
+    - Bi-allelic SNVs only
+    - Variants passing hard thresholds
+    - Variants passing the set call rate and MAF thresholds
+    - Genotypes passing on gnomAD ADJ criteria (GQ>=20, DP>=10, AB>0.2 for hets)
 
     In addition, the MT will be LD-pruned if `ld_r2` is set.
 
