@@ -205,8 +205,8 @@ def score_bin_agg(
             grch37_resources.reference_data.clinvar
             if build == "GRCh37"
             else grch38_resources.reference_data.clinvar
-        )
-    ).ht()[ht.key]
+        ).ht()
+    )[ht.key]
     truth_data = (
         truth_data or (
             grch37_resources.reference_data.get_truth_ht()
