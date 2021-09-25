@@ -200,15 +200,19 @@ def score_bin_agg(
     indel_length = hl.abs(ht.alleles[0].length() - ht.alleles[1].length())
     # Load external evaluation data
     build = get_reference_genome(ht.locus).name
-    clinvar = clinvar or (
-        grch37_resources.reference_data.clinvar
-        if build == "GRCh37"
-        else grch38_resources.reference_data.clinvar
+    clinvar = (
+        clinvar or (
+            grch37_resources.reference_data.clinvar
+            if build == "GRCh37"
+            else grch38_resources.reference_data.clinvar
+        )
     ).ht()[ht.key]
-    truth_data = truth_data or (
-        grch37_resources.reference_data.get_truth_ht()
-        if build == "GRCh37"
-        else grch38_resources.reference_data.get_truth_ht()
+    truth_data = (
+        truth_data or (
+            grch37_resources.reference_data.get_truth_ht()
+            if build == "GRCh37"
+            else grch38_resources.reference_data.get_truth_ht()
+        )
     )[ht.key]
 
     result = dict(
