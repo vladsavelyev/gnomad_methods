@@ -66,10 +66,10 @@ purcell_5k_intervals = GnomadPublicTableResource(
 )
 
 na12878_giab = GnomadPublicMatrixTableResource(
-    path="gs://gnomad-public-requester-pays/resources/grch38/na12878/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.mt",
+    path="gs://cpg-reference/validation/giab/truth/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.mt/",
     import_func=hl.import_vcf,
     import_args={
-        "path": "gs://gnomad-public-requester-pays/resources/grch38/na12878/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+        "path": "gs://cpg-reference/validation/giab/truth/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
         "force_bgz": True,
         "min_partitions": 100,
         "reference_genome": "GRCh38",
@@ -77,10 +77,10 @@ na12878_giab = GnomadPublicMatrixTableResource(
 )
 
 na12878_giab_hc_intervals = GnomadPublicTableResource(
-    path="gs://gnomad-public-requester-pays/resources/grch38/na12878/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel_noCENorHET7_hc_regions.ht",
+    path="gs://cpg-reference/validation/giab/regions/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel_noCENorHET7_hc_regions.ht",
     import_func=hl.import_bed,
     import_args={
-        "path": "gs://gnomad-public-requester-pays/resources/grch38/na12878/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel_noCENorHET7.bed",
+        "path": "gs://cpg-reference/validation/giab/regions/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel_noCENorHET7.bed",
         "reference_genome": "GRCh38",
         "skip_invalid_intervals": True,
     },
@@ -103,10 +103,10 @@ syndip = VersionedMatrixTableResource(
     default_version="20180222",
     versions={
         "20180222": GnomadPublicMatrixTableResource(
-            path="gs://gnomad-public-requester-pays/resources/grch38/syndip/syndip.b38_20180222.mt",
+            path="gs://cpg-reference/validation/giab/truth/syndip.b38_20180222.mt",
             import_func=hl.import_vcf,
             import_args={
-                "path": "gs://gnomad-public-requester-pays/resources/grch38/syndip/full.38.20180222.vcf.gz",
+                "path": "gs://cpg-reference/validation/syndip/truth/full.38.20180222.vcf.gz",
                 "force_bgz": True,
                 "min_partitions": 100,
                 "reference_genome": "GRCh38",
@@ -227,29 +227,29 @@ mills = GnomadPublicTableResource(
 )
 
 lcr_intervals = GnomadPublicTableResource(
-    path="gs://gnomad-public-requester-pays/resources/grch38/lcr_intervals/LCRFromHengHg38.ht",
+    path="gs://cpg-reference/hg38/gnomad/v0/lcr_intervals/LCRFromHengHg38.ht",
     import_func=hl.import_locus_intervals,
     import_args={
-        "path": "gs://gnomad-public-requester-pays/resources/grch38/lcr_intervals/LCRFromHengHg38.txt",
+        "path": "gs://cpg-reference/hg38/gnomad/v0/lcr_intervals/LCRFromHengHg38.bed",
         "reference_genome": "GRCh38",
         "skip_invalid_intervals": True,
     },
 )
 
 seg_dup_intervals = GnomadPublicTableResource(
-    path="gs://gnomad-public-requester-pays/resources/grch38/seg_dup_intervals/GRCh38_segdups.ht",
+    path="gs://cpg-reference/hg38/gnomad/v0/seg_dup_intervals/GRCh38_segdups.ht",
     import_func=hl.import_bed,
     import_args={
-        "path": "gs://gnomad-public-requester-pays/resources/grch38/seg_dup_intervals/GRCh38_segdups.bed",
+        "path": "gs://cpg-reference/hg38/gnomad/v0/seg_dup_intervals/GRCh38_segdups.bed",
         "reference_genome": "GRCh38",
     },
 )
 
 telomeres_and_centromeres = GnomadPublicTableResource(
-    path="gs://gnomad-public-requester-pays/resources/grch38/telomeres_and_centromeres/hg38.telomeresAndMergedCentromeres.ht",
+    path="gs://cpg-reference/hg38/gnomad/v0/telomeres_and_centromeres/hg38.telomeresAndMergedCentromeres.ht",
     import_func=hl.import_bed,
     import_args={
-        "path": "gs://gnomad-public-requester-pays/resources/grch38/telomeres_and_centromeres/hg38.telomeresAndMergedCentromeres.bed",
+        "path": "gs://cpg-reference/hg38/gnomad/v0/telomeres_and_centromeres/hg38.telomeresAndMergedCentromeres.bed",
         "reference_genome": "GRCh38",
         "skip_invalid_intervals": True,
     },

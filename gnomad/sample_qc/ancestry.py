@@ -275,6 +275,9 @@ def run_pca_with_relateds(
     pca_loadings = pca_loadings.annotate(
         pca_af=pca_af_ht[pca_loadings.key].pca_af
     )  # TODO: Evaluate if needed to write results at this point if relateds or not
+    
+    # TODO: load scores/loadings from gnomad?
+    # TODO: based on https://gnomad.broadinstitute.org/news/2020-10-gnomad-v3-1-new-content-methods-annotations-and-data-availability/#ancestry-inference
 
     if not related_samples_to_drop:
         return pca_evals, pca_scores, pca_loadings

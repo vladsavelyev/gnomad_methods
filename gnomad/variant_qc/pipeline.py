@@ -118,7 +118,10 @@ def create_binned_ht(
 
 
 def score_bin_agg(
-    ht: hl.GroupedTable, fam_stats_ht: Optional[hl.Table]
+    ht: hl.GroupedTable, 
+    fam_stats_ht: Optional[hl.Table],
+    clinvar: Optional[hl.Table] = None,
+    truth_data: Optional[hl.Table] = None,
 ) -> Dict[str, hl.expr.Aggregation]:
     """
     Make dict of aggregations for min/max of score, number of ClinVar variants, number of truth variants, and family statistics.
@@ -197,12 +200,12 @@ def score_bin_agg(
     indel_length = hl.abs(ht.alleles[0].length() - ht.alleles[1].length())
     # Load external evaluation data
     build = get_reference_genome(ht.locus).name
-    clinvar = (
+    clinvar = clinvar or (
         grch37_resources.reference_data.clinvar
         if build == "GRCh37"
         else grch38_resources.reference_data.clinvar
     ).ht()[ht.key]
-    truth_data = (
+    truth_data = truth_data or (
         grch37_resources.reference_data.get_truth_ht()
         if build == "GRCh37"
         else grch38_resources.reference_data.get_truth_ht()
