@@ -219,6 +219,7 @@ def annotate_sex(
     gt_expr: str = "GT",
     f_stat_cutoff: float = 0.5,
     aaf_threshold: float = 0.001,
+    out_ploidy_ht: Optional[str] = None,
 ) -> hl.Table:
     """
     Impute sample sex based on X-chromosome heterozygosity and sex chromosome ploidy.
@@ -249,6 +250,7 @@ def annotate_sex(
     :param gt_expr: Name of entry field storing the genotype. Default: 'GT'
     :param f_stat_cutoff: f-stat to roughly divide 'XX' from 'XY' samples. Assumes XX samples are below cutoff and XY are above cutoff.
     :param float aaf_threshold: Minimum alternate allele frequency to be used in f-stat calculations.
+    :param out_ploidy_ht: if provided, checkpoint ploidy ht
     :return: Table of samples and their imputed sex karyotypes.
     """
     logger.info("Imputing sex chromosome ploidies...")
@@ -256,6 +258,8 @@ def annotate_sex(
         ploidy_ht = impute_sex_ploidy(
             mt, excluded_intervals, included_intervals, normalization_contig
         )
+        if out_ploidy_ht:
+            ploidy_ht = ploidy_ht.checkpoint(out_ploidy_ht, overwrite=True)
     else:
         raise NotImplementedError(
             "Imputing sex ploidy does not exist yet for dense data."
