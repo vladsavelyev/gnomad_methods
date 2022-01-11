@@ -117,8 +117,7 @@ def get_ploidy_cutoffs(
         (
             (
                 # 1.24                 + 0.68                                               = 1.93
-                sex_stats["xy"].y.mean - (normal_ploidy_cutoff * sex_stats["xy"].y.stdev),  # lower_cutoff_Y
-                # sex_stats["xx"].y.mean + (normal_ploidy_cutoff * sex_stats["xx"].y.stdev),  # lower_cutoff_Y
+                sex_stats["xx"].y.mean + (normal_ploidy_cutoff * sex_stats["xx"].y.stdev),  # lower_cutoff_Y
                 # 1.78                 + 1.06                                               = 2.85
                 sex_stats["xy"].y.mean + (normal_ploidy_cutoff * sex_stats["xy"].y.stdev),  # upper_cutoff_Y
             ),
