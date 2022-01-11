@@ -544,8 +544,6 @@ def split_lowqual_annotation(
 
 def impute_sex_ploidy(
     mt: hl.MatrixTable,
-    excluded_calling_intervals: Optional[hl.Table] = None,
-    included_calling_intervals: Optional[hl.Table] = None,
     normalization_contig: str = "chr20",
     chr_x: Optional[str] = None,
     chr_y: Optional[str] = None,
@@ -560,10 +558,6 @@ def impute_sex_ploidy(
     non-ref genotypes.
 
     :param mt: Input sparse Matrix Table
-    :param excluded_calling_intervals: Optional table of intervals to exclude from the computation.
-        Used only when determining contig size (not used when computing chromosome depth).
-    :param included_calling_intervals: Optional table of intervals to use in the computation.
-        Used only when determining contig size (not used when computing chromosome depth).
     :param normalization_contig: Which chromosome to normalize by
     :param chr_x: Optional X Chromosome contig name (by default uses the X contig in the reference)
     :param chr_y: Optional Y Chromosome contig name (by default uses the Y contig in the reference)
@@ -587,64 +581,49 @@ def impute_sex_ploidy(
             )
         chr_y = ref.y_contigs[0]
 
-    def get_contig_size(contig: str) -> int:
-        logger.info("Working on %s", contig)
-        contig_ht = hl.utils.range_table(
-            ref.contig_length(contig),
-            n_partitions=int(ref.contig_length(contig) / 500_000),
-        )
-        contig_ht = contig_ht.annotate(
-            locus=hl.locus(contig=contig, pos=contig_ht.idx + 1, reference_genome=ref)
-        )
-        contig_ht = contig_ht.filter(contig_ht.locus.sequence_context().lower() != "n")
-
-        if contig in ref.x_contigs:
-            contig_ht = contig_ht.filter(contig_ht.locus.in_x_nonpar())
-        if contig in ref.y_contigs:
-            contig_ht = contig_ht.filter(contig_ht.locus.in_y_nonpar())
-
-        contig_ht = contig_ht.key_by("locus")
-        if included_calling_intervals is not None:
-            contig_ht = contig_ht.filter(
-                hl.is_defined(included_calling_intervals[contig_ht.key])
-            )
-        if excluded_calling_intervals is not None:
-            contig_ht = contig_ht.filter(
-                hl.is_missing(excluded_calling_intervals[contig_ht.key])
-            )
-        contig_size = contig_ht.count()
-        logger.info("Contig %s has %d bases for coverage.", contig, contig_size)
-        return contig_size
-
-    def get_chr_dp_ann(chrom: str, contig_size: int = None) -> hl.Table:
-        if not contig_size:
-            contig_size = get_contig_size(chrom)
+    def get_chr_dp_ann(mt, chrom: str) -> hl.Table:
         chr_mt = hl.filter_intervals(mt, [hl.parse_locus_interval(chrom)])
-
         if chrom in ref.x_contigs:
             chr_mt = chr_mt.filter_rows(chr_mt.locus.in_x_nonpar())
         if chrom in ref.y_contigs:
             chr_mt = chr_mt.filter_rows(chr_mt.locus.in_y_nonpar())
 
-        return chr_mt.select_cols(
+        ht = chr_mt.select_cols(
             **{
-                f"{chrom}_mean_dp": hl.agg.sum(
+                f"{chrom}_dp_sum": hl.agg.sum(
                     hl.cond(
-                        chr_mt.LGT.is_hom_ref(),
+                        chr_mt.GT.is_hom_ref(),
                         chr_mt.DP * (1 + chr_mt.END - chr_mt.locus.position),
                         chr_mt.DP,
                     )
+                ),
+                f"{chrom}_blocks_total_size": hl.agg.sum(
+                    hl.cond(
+                        chr_mt.GT.is_hom_ref(),
+                        1 + chr_mt.END - chr_mt.locus.position,
+                        1,                    
+                    )
                 )
-                / contig_size
             }
         ).cols()
+        return ht.annotate(**{
+            f"{chrom}_mean_dp": ht[f"{chrom}_dp_sum"] / ht[f"{chrom}_blocks_total_size"]
+        })
 
-    normalization_chrom_dp = get_chr_dp_ann(normalization_contig, contig_size=60385861)
-    chrX_dp = get_chr_dp_ann(chr_x, contig_size=148308578)
-    chrY_dp = get_chr_dp_ann(chr_y, contig_size=23409260)
+    normalization_chrom_dp = get_chr_dp_ann(mt, normalization_contig)
+    mt = mt.annotate_cols(chr20_mean_dp=normalization_chrom_dp[mt.col_key].chr20_mean_dp)
+
+    # Removing blocks with an abnormally high coverage that might distort 
+    # the mean coverage calculation (we've seen DRAGMAP CRAMs where a small
+    # repeat on chrY attracted piles of reads that raised mean chrY coverage 
+    # from ~3x to ~20x)
+    filt_mt = mt.filter_entries(mt.DP < 10 * mt.chr20_mean_dp)
+    
+    chrx_dp = get_chr_dp_ann(filt_mt, chr_x)
+    chry_dp = get_chr_dp_ann(filt_mt, chr_y)
 
     ht = normalization_chrom_dp.annotate(
-        **chrX_dp[normalization_chrom_dp.key], **chrY_dp[normalization_chrom_dp.key],
+        **chrx_dp[normalization_chrom_dp.key], **chry_dp[normalization_chrom_dp.key],
     )
 
     return ht.annotate(
