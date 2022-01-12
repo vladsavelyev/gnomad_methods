@@ -544,6 +544,8 @@ def split_lowqual_annotation(
 
 def impute_sex_ploidy(
     mt: hl.MatrixTable,
+    excluded_calling_intervals: Optional[hl.Table] = None,
+    included_calling_intervals: Optional[hl.Table] = None,
     normalization_contig: str = "chr20",
     chr_x: Optional[str] = None,
     chr_y: Optional[str] = None,
@@ -558,6 +560,10 @@ def impute_sex_ploidy(
     non-ref genotypes.
 
     :param mt: Input sparse Matrix Table
+    :param excluded_calling_intervals: Optional table of intervals to exclude from the computation.
+        Used only when determining contig size (not used when computing chromosome depth).
+    :param included_calling_intervals: Optional table of intervals to use in the computation.
+        Used only when determining contig size (not used when computing chromosome depth).
     :param normalization_contig: Which chromosome to normalize by
     :param chr_x: Optional X Chromosome contig name (by default uses the X contig in the reference)
     :param chr_y: Optional Y Chromosome contig name (by default uses the Y contig in the reference)
