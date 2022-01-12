@@ -598,14 +598,14 @@ def impute_sex_ploidy(
             **{
                 f"{chrom}_dp_sum": hl.agg.sum(
                     hl.cond(
-                        chr_mt.GT.is_hom_ref(),
+                        chr_mt.LGT.is_hom_ref(),
                         chr_mt.DP * (1 + chr_mt.END - chr_mt.locus.position),
                         chr_mt.DP,
                     )
                 ),
                 f"{chrom}_blocks_total_size": hl.agg.sum(
                     hl.cond(
-                        chr_mt.GT.is_hom_ref(),
+                        chr_mt.LGT.is_hom_ref(),
                         1 + chr_mt.END - chr_mt.locus.position,
                         1,                    
                     )
