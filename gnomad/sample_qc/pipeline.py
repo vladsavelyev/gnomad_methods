@@ -220,6 +220,8 @@ def annotate_sex(
     f_stat_cutoff: float = 0.5,
     aaf_threshold: float = 0.001,
     out_ploidy_ht: Optional[str] = None,
+    normal_ploidy_cutoff: int = None,
+    aneuploidy_cutoff: int = None,
 ) -> hl.Table:
     """
     Impute sample sex based on X-chromosome heterozygosity and sex chromosome ploidy.
@@ -300,7 +302,12 @@ def annotate_sex(
     sex_ht = sex_ht.annotate(**ploidy_ht[sex_ht.key])
 
     logger.info("Inferring sex karyotypes")
-    x_ploidy_cutoffs, y_ploidy_cutoffs = get_ploidy_cutoffs(sex_ht, f_stat_cutoff)
+    x_ploidy_cutoffs, y_ploidy_cutoffs = get_ploidy_cutoffs(
+        sex_ht, 
+        f_stat_cutoff,
+        normal_ploidy_cutoff=normal_ploidy_cutoff,
+        aneuploidy_cutoff=aneuploidy_cutoff,
+    )
     sex_ht = sex_ht.annotate_globals(
         x_ploidy_cutoffs=hl.struct(
             upper_cutoff_X=x_ploidy_cutoffs[0],

@@ -91,6 +91,9 @@ def get_ploidy_cutoffs(
     :param aneuploidy_cutoff: Number of standard deviations to use when sex chromosome ploidy cutoffs for aneuploidies.
     :return: Tuple of ploidy cutoff tuples: ((x_ploidy_cutoffs), (y_ploidy_cutoffs))
     """
+    normal_ploidy_cutoff = normal_ploidy_cutoff or 5
+    aneuploidy_cutoff = aneuploidy_cutoff or 6
+    
     # Group sex chromosome ploidy table by f_stat cutoff and get mean/stdev for chrX/Y ploidies
     sex_stats = ht.aggregate(
         hl.agg.group_by(
@@ -103,25 +106,25 @@ def get_ploidy_cutoffs(
 
     cutoffs = (
         (
-            # 0.86                 + 0.13 = 5              * 0.026                      = 0.999
+            # 1.09                 + 5                     * 0.05                      = 1.3490061717776771
             sex_stats["xy"].x.mean + (normal_ploidy_cutoff * sex_stats["xy"].x.stdev),  # upper_cutoff_X
             (
-                # 2.16                 - 1.289 = 5             * 0.25                       = 0.874
+                # 2.16                 - 1.289 = 5             * 0.25                       = 1.609445224376911
                 sex_stats["xx"].x.mean - (normal_ploidy_cutoff * sex_stats["xx"].x.stdev),  # lower_cutoff_XX
-                # 2.16                 + 1.289 = 5             * 0.25                       = 3.45
+                # 2.16                 + 1.289 = 5             * 0.25                       = 2.1693112584404615
                 sex_stats["xx"].x.mean + (normal_ploidy_cutoff * sex_stats["xx"].x.stdev),  # upper_cutoff_XX
             ),
-            # 2.16                 +  6                 * 0.257                      = 3.71
+            # 2.16                 +  6                 * 0.257                      = 2.2252978618468164
             sex_stats["xx"].x.mean + (aneuploidy_cutoff * sex_stats["xx"].x.stdev),  # lower_cutoff_XXX
         ),
         (
             (
-                # 1.24                 + 0.68                                               = 1.93
+                # 0.28                 + 5                     * 0.15                       = 1.0812723372651134
                 sex_stats["xx"].y.mean + (normal_ploidy_cutoff * sex_stats["xx"].y.stdev),  # lower_cutoff_Y
-                # 1.78                 + 1.06                                               = 2.85
+                # 0.92                 + 5                     * 0.06                       = 1.2390433418143896
                 sex_stats["xy"].y.mean + (normal_ploidy_cutoff * sex_stats["xy"].y.stdev),  # upper_cutoff_Y
             ),
-            # 1.78                 + 1.27                                            = 3.06
+            # 1.78                 + 1.27                                            = 1.302499243854204
             sex_stats["xy"].y.mean + (aneuploidy_cutoff * sex_stats["xy"].y.stdev),  # lower_cutoff_YY
         ),
     )
