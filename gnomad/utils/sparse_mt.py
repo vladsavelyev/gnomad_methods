@@ -660,7 +660,7 @@ def impute_sex_ploidy(
     # the mean coverage calculation (we've seen DRAGMAP CRAMs where a small
     # repeat on chrY attracted piles of reads that raised mean chrY coverage 
     # from ~3x to ~20x)
-    filt_mt = mt.filter_entries(filt_mt.DP < 10 * filt_mt.chr20_mean_dp)
+    filt_mt = filt_mt.filter_entries(filt_mt.DP < 10 * filt_mt.chr20_mean_dp)
 
     chrx_dp = get_chr_dp_ann(filt_mt, chr_x)
     chry_dp = get_chr_dp_ann(filt_mt, chr_y)
