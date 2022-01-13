@@ -587,8 +587,39 @@ def impute_sex_ploidy(
             )
         chr_y = ref.y_contigs[0]
 
+    def get_contig_size(contig: str) -> int:
+        logger.info("Working on %s", contig)
+        contig_ht = hl.utils.range_table(
+            ref.contig_length(contig),
+            n_partitions=int(ref.contig_length(contig) / 500_000),
+        )
+        contig_ht = contig_ht.annotate(
+            locus=hl.locus(contig=contig, pos=contig_ht.idx + 1, reference_genome=ref)
+        )
+        contig_ht = contig_ht.filter(contig_ht.locus.sequence_context().lower() != "n")
+
+        if contig in ref.x_contigs:
+            contig_ht = contig_ht.filter(contig_ht.locus.in_x_nonpar())
+        if contig in ref.y_contigs:
+            contig_ht = contig_ht.filter(contig_ht.locus.in_y_nonpar())
+
+        contig_ht = contig_ht.key_by("locus")
+        if included_calling_intervals is not None:
+            contig_ht = contig_ht.filter(
+                hl.is_defined(included_calling_intervals[contig_ht.key])
+            )
+        if excluded_calling_intervals is not None:
+            contig_ht = contig_ht.filter(
+                hl.is_missing(excluded_calling_intervals[contig_ht.key])
+            )
+        contig_size = contig_ht.count()
+        logger.info("Contig %s has %d bases for coverage.", contig, contig_size)
+        return contig_size
+    
     def get_chr_dp_ann(mt, chrom: str) -> hl.Table:
+        contig_size = get_contig_size(chrom)
         chr_mt = hl.filter_intervals(mt, [hl.parse_locus_interval(chrom)])
+
         if chrom in ref.x_contigs:
             chr_mt = chr_mt.filter_rows(chr_mt.locus.in_x_nonpar())
         if chrom in ref.y_contigs:
@@ -609,22 +640,28 @@ def impute_sex_ploidy(
                         1 + chr_mt.END - chr_mt.locus.position,
                         1,                    
                     )
-                )
+                ),
             }
         ).cols()
         return ht.annotate(**{
-            f"{chrom}_mean_dp": ht[f"{chrom}_dp_sum"] / ht[f"{chrom}_blocks_total_size"]
+            f"{chrom}_mean_dp": ht[f"{chrom}_dp_sum"] / contig_size
         })
 
-    normalization_chrom_dp = get_chr_dp_ann(mt, normalization_contig)
-    mt = mt.annotate_cols(chr20_mean_dp=normalization_chrom_dp[mt.col_key].chr20_mean_dp)
+    # Removing blocks with GQ=0, to clean up messy DRAGEN's chrY.
+    # It will not affect the "chromosome size" (= ploidy denominator) calulation 
+    filt_mt = mt.filter_entries(mt.GQ == 0)
+
+    normalization_chrom_dp = get_chr_dp_ann(filt_mt, normalization_contig)
+    filt_mt = filt_mt.annotate_cols(
+        chr20_mean_dp=normalization_chrom_dp[filt_mt.col_key].chr20_mean_dp
+    )
 
     # Removing blocks with an abnormally high coverage that might distort 
     # the mean coverage calculation (we've seen DRAGMAP CRAMs where a small
     # repeat on chrY attracted piles of reads that raised mean chrY coverage 
     # from ~3x to ~20x)
-    filt_mt = mt.filter_entries(mt.DP < 10 * mt.chr20_mean_dp)
-    
+    filt_mt = mt.filter_entries(filt_mt.DP < 10 * filt_mt.chr20_mean_dp)
+
     chrx_dp = get_chr_dp_ann(filt_mt, chr_x)
     chry_dp = get_chr_dp_ann(filt_mt, chr_y)
 

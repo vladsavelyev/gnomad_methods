@@ -253,6 +253,8 @@ def annotate_sex(
     :param f_stat_cutoff: f-stat to roughly divide 'XX' from 'XY' samples. Assumes XX samples are below cutoff and XY are above cutoff.
     :param float aaf_threshold: Minimum alternate allele frequency to be used in f-stat calculations.
     :param out_ploidy_ht: if provided, checkpoint ploidy ht
+    :param normal_ploidy_cutoff: Number of standard deviations to use when determining sex chromosome ploidy cutoffs for XX, XY karyotypes.
+    :param aneuploidy_cutoff: Number of standard deviations to use when sex chromosome ploidy cutoffs for aneuploidies.
     :return: Table of samples and their imputed sex karyotypes.
     """
     logger.info("Imputing sex chromosome ploidies...")
@@ -303,7 +305,7 @@ def annotate_sex(
 
     logger.info("Inferring sex karyotypes")
     x_ploidy_cutoffs, y_ploidy_cutoffs = get_ploidy_cutoffs(
-        sex_ht, 
+        sex_ht,
         f_stat_cutoff,
         normal_ploidy_cutoff=normal_ploidy_cutoff,
         aneuploidy_cutoff=aneuploidy_cutoff,

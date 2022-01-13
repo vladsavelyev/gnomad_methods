@@ -93,7 +93,7 @@ def get_ploidy_cutoffs(
     """
     normal_ploidy_cutoff = normal_ploidy_cutoff or 5
     aneuploidy_cutoff = aneuploidy_cutoff or 6
-    
+
     # Group sex chromosome ploidy table by f_stat cutoff and get mean/stdev for chrX/Y ploidies
     sex_stats = ht.aggregate(
         hl.agg.group_by(
