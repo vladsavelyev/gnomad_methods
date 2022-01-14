@@ -649,7 +649,7 @@ def impute_sex_ploidy(
 
     # Removing blocks with GQ=0, to clean up messy DRAGEN's chrY.
     # It will not affect the "chromosome size" (= ploidy denominator) calulation 
-    filt_mt = mt.filter_entries(mt.GQ == 0)
+    filt_mt = mt.filter_entries(mt.GQ > 0)
 
     normalization_chrom_dp = get_chr_dp_ann(filt_mt, normalization_contig)
     filt_mt = filt_mt.annotate_cols(
