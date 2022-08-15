@@ -14,4 +14,5 @@ Contents
    Getting Started <getting_started>
    Examples <examples/index>
    API Reference <api_reference/index>
-   Change Log <changelog.md>
+   Resource Sources <resource_sources>
+   Change Log <https://github.com/broadinstitute/gnomad_methods/releases>

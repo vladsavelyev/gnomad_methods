@@ -230,7 +230,7 @@ lcr_intervals = GnomadPublicTableResource(
     path="gs://cpg-reference/hg38/gnomad/v0/lcr_intervals/LCRFromHengHg38.ht",
     import_func=hl.import_locus_intervals,
     import_args={
-        "path": "gs://cpg-reference/hg38/gnomad/v0/lcr_intervals/LCRFromHengHg38.bed",
+        "path": "gs://gnomad-public-requester-pays/resources/grch38/lcr_intervals/LCRFromHengHg38.txt",
         "reference_genome": "GRCh38",
         "skip_invalid_intervals": True,
     },
@@ -240,7 +240,7 @@ seg_dup_intervals = GnomadPublicTableResource(
     path="gs://cpg-reference/hg38/gnomad/v0/seg_dup_intervals/GRCh38_segdups.ht",
     import_func=hl.import_bed,
     import_args={
-        "path": "gs://cpg-reference/hg38/gnomad/v0/seg_dup_intervals/GRCh38_segdups.bed",
+        "path": "gs://gnomad-public-requester-pays/resources/grch38/seg_dup_intervals/GRCh38_segdups.bed",
         "reference_genome": "GRCh38",
     },
 )
@@ -249,7 +249,7 @@ telomeres_and_centromeres = GnomadPublicTableResource(
     path="gs://cpg-reference/hg38/gnomad/v0/telomeres_and_centromeres/hg38.telomeresAndMergedCentromeres.ht",
     import_func=hl.import_bed,
     import_args={
-        "path": "gs://cpg-reference/hg38/gnomad/v0/telomeres_and_centromeres/hg38.telomeresAndMergedCentromeres.bed",
+        "path": "gs://gnomad-public-requester-pays/resources/grch38/telomeres_and_centromeres/hg38.telomeresAndMergedCentromeres.bed",
         "reference_genome": "GRCh38",
         "skip_invalid_intervals": True,
     },

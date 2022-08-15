@@ -549,6 +549,7 @@ def impute_sex_ploidy(
     normalization_contig: str = "chr20",
     chr_x: Optional[str] = None,
     chr_y: Optional[str] = None,
+    use_only_variants: bool = False,
 ) -> hl.Table:
     """
     Impute sex ploidy from a sparse MatrixTable.
@@ -557,16 +558,20 @@ def impute_sex_ploidy(
     chromosome (by default chr20).
 
     Coverage is computed using the median block coverage (summed over the block size) and the non-ref coverage at
-    non-ref genotypes.
+    non-ref genotypes unless the `use_only_variants` argument is set to True and then it will use the mean coverage
+    defined by only the variants.
 
     :param mt: Input sparse Matrix Table
-    :param excluded_calling_intervals: Optional table of intervals to exclude from the computation.
-        Used only when determining contig size (not used when computing chromosome depth).
-    :param included_calling_intervals: Optional table of intervals to use in the computation.
-        Used only when determining contig size (not used when computing chromosome depth).
+    :param excluded_calling_intervals: Optional table of intervals to exclude from the computation. Used only when
+        determining contig size (not used when computing chromosome depth) when `use_only_variants` is False.
+    :param included_calling_intervals: Optional table of intervals to use in the computation. Used only when
+        determining contig size (not used when computing chromosome depth) when `use_only_variants` is False.
     :param normalization_contig: Which chromosome to normalize by
     :param chr_x: Optional X Chromosome contig name (by default uses the X contig in the reference)
     :param chr_y: Optional Y Chromosome contig name (by default uses the Y contig in the reference)
+    :param use_only_variants: Whether to use depth of variant data within calling intervals instead of reference data.
+        Default will only use reference data.
+
     :return: Table with mean coverage over chromosomes 20, X and Y and sex chromosomes ploidy based on normalized coverage.
     """
     ref = get_reference_genome(mt.locus, add_sequence=True)
@@ -588,6 +593,16 @@ def impute_sex_ploidy(
         chr_y = ref.y_contigs[0]
 
     def get_contig_size(contig: str) -> int:
+        """
+        Compute the size of the specified `contig` using the median block coverage (summed over the block size).
+
+        The size of the contig will be determined using only non par regions if the contig is an X or Y reference contig
+        and using the intervals specified by `included_calling_intervals` and excluding intervals specified by
+        `excluded_calling_intervals` if either is defined in the outer function.
+
+        :param contig: Contig to compute the size of
+        :return: Integer of the contig size
+        """
         logger.info("Working on %s", contig)
         contig_ht = hl.utils.range_table(
             ref.contig_length(contig),
@@ -615,8 +630,26 @@ def impute_sex_ploidy(
         contig_size = contig_ht.count()
         logger.info("Contig %s has %d bases for coverage.", contig, contig_size)
         return contig_size
-    
-    def get_chr_dp_ann(mt, chrom: str) -> hl.Table:
+
+    def get_chr_dp_ann(chrom: str) -> hl.Table:
+        """
+        Compute the mean depth of the specified chromosome.
+
+        The total depth will be determined using the sum DP of either reference and variant data or only variant data
+        depending on the value of `use_only_variants` in the outer function.
+
+        If `use_only_variants` is set to False then this value is computed using the median block coverage (summed over
+        the block size). If `use_only_variants` is set to True, this value is computed using the sum of DP for  all
+        variants divided by the total number of variants.
+
+        The depth calculations will be determined using only non par regions if the contig is an X or Y reference contig
+        and using the intervals specified by `included_calling_intervals` and excluding intervals specified by
+        `excluded_calling_intervals` if either is defined in the outer function (when `use_only_variants` is not
+        set this only applies to the contig size estimate and is not used when computing chromosome depth).
+
+        :param chrom: Chromosome to compute the mean depth of
+        :return: Table of a per sample mean depth of `chrom`
+        """
         contig_size = get_contig_size(chrom)
         chr_mt = hl.filter_intervals(mt, [hl.parse_locus_interval(chrom)])
 
@@ -625,48 +658,45 @@ def impute_sex_ploidy(
         if chrom in ref.y_contigs:
             chr_mt = chr_mt.filter_rows(chr_mt.locus.in_y_nonpar())
 
-        ht = chr_mt.select_cols(
-            **{
-                f"{chrom}_dp_sum": hl.agg.sum(
-                    hl.cond(
-                        chr_mt.LGT.is_hom_ref(),
-                        chr_mt.DP * (1 + chr_mt.END - chr_mt.locus.position),
-                        chr_mt.DP,
+        if use_only_variants:
+            if included_calling_intervals is not None:
+                chr_mt = chr_mt.filter_rows(
+                    hl.is_defined(included_calling_intervals[chr_mt.row_key])
+                )
+            if excluded_calling_intervals is not None:
+                chr_mt = chr_mt.filter_rows(
+                    hl.is_missing(excluded_calling_intervals[chr_mt.row_key])
+                )
+            return chr_mt.select_cols(
+                **{
+                    f"{chrom}_mean_dp": hl.agg.filter(
+                        chr_mt.LGT.is_non_ref(),
+                        hl.agg.sum(chr_mt.DP),
                     )
-                ),
-                f"{chrom}_blocks_total_size": hl.agg.sum(
-                    hl.cond(
-                        chr_mt.LGT.is_hom_ref(),
-                        1 + chr_mt.END - chr_mt.locus.position,
-                        1,                    
+                    / hl.agg.filter(chr_mt.LGT.is_non_ref(), hl.agg.count())
+                }
+            ).cols()
+        else:
+            return chr_mt.select_cols(
+                **{
+                    f"{chrom}_mean_dp": hl.agg.sum(
+                        hl.if_else(
+                            chr_mt.LGT.is_hom_ref(),
+                            chr_mt.DP * (1 + chr_mt.END - chr_mt.locus.position),
+                            chr_mt.DP,
+                        )
                     )
-                ),
-            }
-        ).cols()
-        return ht.annotate(**{
-            f"{chrom}_mean_dp": ht[f"{chrom}_dp_sum"] / contig_size
-        })
+                    / contig_size
+                }
+            ).cols()
 
-    # Removing blocks with GQ=0, to clean up messy DRAGEN's chrY.
-    # It will not affect the "chromosome size" (= ploidy denominator) calulation 
-    filt_mt = mt.filter_entries(mt.GQ > 0)
-
-    normalization_chrom_dp = get_chr_dp_ann(filt_mt, normalization_contig)
-    filt_mt = filt_mt.annotate_cols(
-        chr20_mean_dp=normalization_chrom_dp[filt_mt.col_key].chr20_mean_dp
-    )
-
-    # Removing blocks with an abnormally high coverage that might distort 
-    # the mean coverage calculation (we've seen DRAGMAP CRAMs where a small
-    # repeat on chrY attracted piles of reads that raised mean chrY coverage 
-    # from ~3x to ~20x)
-    filt_mt = filt_mt.filter_entries(filt_mt.DP < 10 * filt_mt.chr20_mean_dp)
-
-    chrx_dp = get_chr_dp_ann(filt_mt, chr_x)
-    chry_dp = get_chr_dp_ann(filt_mt, chr_y)
+    normalization_chrom_dp = get_chr_dp_ann(normalization_contig)
+    chrX_dp = get_chr_dp_ann(chr_x)
+    chrY_dp = get_chr_dp_ann(chr_y)
 
     ht = normalization_chrom_dp.annotate(
-        **chrx_dp[normalization_chrom_dp.key], **chry_dp[normalization_chrom_dp.key],
+        **chrX_dp[normalization_chrom_dp.key],
+        **chrY_dp[normalization_chrom_dp.key],
     )
 
     return ht.annotate(

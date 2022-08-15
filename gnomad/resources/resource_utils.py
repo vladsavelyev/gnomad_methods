@@ -2,8 +2,8 @@
 
 import logging
 from abc import ABC, abstractmethod
-from functools import reduce
-from typing import Any, Callable, Dict, List, Optional
+from functools import reduce, wraps
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 import hail as hl
 from hail.linalg import BlockMatrix
@@ -18,7 +18,14 @@ logger = logging.getLogger("gnomad.resources")
 
 
 GNOMAD_PUBLIC_BUCKETS = ("gnomad-public", "gnomad-public-requester-pays")
+"""
+Public buckets used to stage gnomAD data.
 
+`gnomad-public` is a legacy bucket and contains one readme text file.
+
+The gnomAD Production Team writes output data to `gnomad-public-requester-pays`, and all data in this bucket
+syncs to the public bucket `gcp-public-data--gnomad`.
+"""
 
 # Resource classes
 class BaseResource(ABC):
@@ -159,6 +166,41 @@ class MatrixTableResource(BaseResource):
         )
 
 
+class VariantDatasetResource(BaseResource):
+    """
+    A Hail VariantDataset resource.
+
+    :param path: The VariantDataset path (typically ending in .vds)
+    :param import_args: Any sources that are required for the import and need to be kept track of and/or passed to the import_func (e.g. .vcf path for an imported VCF)
+    :param import_func: A function used to import the VariantDataset. `import_func` will be passed the `import_args` dictionary as kwargs.
+    """
+
+    expected_file_extensions: List[str] = [".vds"]
+
+    def vds(self, force_import: bool = False) -> hl.vds.VariantDataset:
+        """
+        Read and return the Hail VariantDataset resource.
+
+        :return: Hail VariantDataset resource
+        """
+        if self.path is None or force_import:
+            return self.import_func(**self.import_args)
+        else:
+            return hl.vds.read_vds(self.path)
+
+    def import_resource(self, overwrite: bool = True, **kwargs) -> None:
+        """
+        Import the VariantDataset resource using its import_func and writes it in its path.
+
+        :param overwrite: If set, existing file(s) will be overwritten
+        :param kwargs: Any other parameters to be passed to hl.vds.VariantDataset.write
+        :return: Nothing
+        """
+        self.import_func(**self.import_args).write(
+            self.path, overwrite=overwrite, **kwargs
+        )
+
+
 class PedigreeResource(BaseResource):
     """
     A pedigree resource.
@@ -183,7 +225,9 @@ class PedigreeResource(BaseResource):
         missing: str = "NA",
     ):
         super().__init__(
-            path=path, import_args=import_args, import_func=import_func,
+            path=path,
+            import_args=import_args,
+            import_func=import_func,
         )
 
         self.quant_pheno = quant_pheno
@@ -291,10 +335,14 @@ class BaseVersionedResource:
         self.versions = versions
 
     def __repr__(self):
-        return "{cls}(default_version={default_version}, versions={{{versions}}})".format(
-            cls=self.__class__.__name__,
-            default_version=self.default_version,
-            versions=", ".join(f'"{k}": {repr(v)}' for k, v in self.versions.items()),
+        return (
+            "{cls}(default_version={default_version}, versions={{{versions}}})".format(
+                cls=self.__class__.__name__,
+                default_version=self.default_version,
+                versions=", ".join(
+                    f'"{k}": {repr(v)}' for k, v in self.versions.items()
+                ),
+            )
         )
 
     def __getattr__(self, name):
@@ -339,6 +387,25 @@ class VersionedMatrixTableResource(BaseVersionedResource):
         super().__init__(default_version, versions)
 
 
+class VersionedVariantDatasetResource(BaseVersionedResource):
+    """
+    Versioned VariantDataset resource.
+
+    The attributes (path, import_args and import_func) of the versioned resource are those of the default version of the resource.
+    In addition, all versions of the resource are stored in the `versions` attribute.
+    :param default_version: The default version of this VariantDataset resource (must to be in the `versions` dict)
+
+    :param versions: A dict of version name -> VariantDatasetResource.
+    """
+
+    resource_class = VariantDatasetResource
+
+    def __init__(
+        self, default_version: str, versions: Dict[str, VariantDatasetResource]
+    ):
+        super().__init__(default_version, versions)
+
+
 class VersionedPedigreeResource(BaseVersionedResource, PedigreeResource):
     """
     Versioned Pedigree resource.
@@ -373,8 +440,52 @@ class VersionedBlockMatrixResource(BaseVersionedResource, BlockMatrixResource):
         super().__init__(default_version, versions)
 
 
+class ResourceNotAvailable(Exception):
+    """Exception raised if a resource is not available from the selected source."""
+
+
 class GnomadPublicResource(BaseResource, ABC):
     """Base class for the gnomAD project's public resources."""
+
+    def __init_subclass__(cls, *, read_resource_methods: Iterable[str] = []) -> None:
+        super().__init_subclass__()
+
+        # Some resources may not be available from all sources due to delays in syncing, etc.
+        # This wraps all methods that read the resource and adds a check for if the resource
+        # is available from the selected source. If the resource is not available, this
+        # throws a more helpful error than if the read were simply allowed to fail.
+        def _wrap_read_resource_method(method_name):
+            original_method = getattr(cls, method_name)
+
+            @wraps(original_method)
+            def read_resource(self, *args, **kwargs):
+                # If one of the known sources is selected, check if the resource is available.
+                # For custom sources, skip the check and attempt to read the resource.
+                resource_source = gnomad_public_resource_configuration.source
+                if not self.is_resource_available():
+                    if resource_source == GnomadPublicResourceSource.GNOMAD:
+                        message = "This resource is not currently available from the gnomAD project public buckets."
+                    elif isinstance(resource_source, GnomadPublicResourceSource):
+                        message = f"This resource is not currently available from {resource_source.value}."
+                    else:
+                        message = f"This resource is not currently available from {resource_source}."
+
+                    raise ResourceNotAvailable(
+                        f"{message}\n\n"
+                        "To load resources from a different source (for example, Google Cloud Public Datasets) instead, use:\n\n"
+                        ">>> from gnomad.resources.config import gnomad_public_resource_configuration, GnomadPublicResourceSource\n"
+                        ">>> gnomad_public_resource_configuration.source = GnomadPublicResourceSource.GOOGLE_CLOUD_PUBLIC_DATASETS\n\n"
+                        "To get all available sources for gnomAD resources, use:\n\n"
+                        ">>> from gnomad.resources.config import GnomadPublicResourceSource\n"
+                        ">>> list(GnomadPublicResourceSource)"
+                    )
+
+                return original_method(self, *args, **kwargs)
+
+            setattr(cls, method_name, read_resource)
+
+        for method_name in read_resource_methods:
+            _wrap_read_resource_method(method_name)
 
     def _get_path(self) -> str:
         resource_source = gnomad_public_resource_configuration.source
@@ -392,6 +503,12 @@ class GnomadPublicResource(BaseResource, ABC):
         if resource_source == GnomadPublicResourceSource.GOOGLE_CLOUD_PUBLIC_DATASETS:
             return f"gs://gcp-public-data--gnomad{relative_path}"
 
+        if resource_source == GnomadPublicResourceSource.REGISTRY_OF_OPEN_DATA_ON_AWS:
+            return f"s3a://gnomad-public-us-east-1{relative_path}"
+
+        if resource_source == GnomadPublicResourceSource.AZURE_OPEN_DATASETS:
+            return f"wasbs://dataset@datasetgnomad.blob.core.windows.net{relative_path}"
+
         return (
             f"{resource_source.rstrip('/')}{relative_path}"  # pylint: disable=no-member
         )
@@ -399,20 +516,46 @@ class GnomadPublicResource(BaseResource, ABC):
     def _set_path(self, path):
         return super()._set_path(path)
 
+    def is_resource_available(self) -> bool:
+        """
+        Check if this resource is available from the selected source.
 
-class GnomadPublicTableResource(TableResource, GnomadPublicResource):
+        :return: True if the resource is available.
+        """
+        path = self.path
+
+        # Hail Tables, MatrixTables, and BlockMatrices are directories.
+        # For those, check for the existence of the _SUCCESS object.
+        path_to_test = (
+            f"{path}/_SUCCESS"
+            if any(path.endswith(ext) for ext in (".ht", ".mt", ".bm"))
+            else path
+        )
+
+        return hl.current_backend().fs.exists(path_to_test)
+
+
+class GnomadPublicTableResource(
+    TableResource, GnomadPublicResource, read_resource_methods=("ht",)
+):
     """Resource class for a public Hail Table published by the gnomAD project."""
 
 
-class GnomadPublicMatrixTableResource(MatrixTableResource, GnomadPublicResource):
+class GnomadPublicMatrixTableResource(
+    MatrixTableResource, GnomadPublicResource, read_resource_methods=("mt",)
+):
     """Resource class for a public Hail MatrixTable published by the gnomAD project."""
 
 
-class GnomadPublicPedigreeResource(PedigreeResource, GnomadPublicResource):
+class GnomadPublicPedigreeResource(
+    PedigreeResource, GnomadPublicResource, read_resource_methods=("ht", "pedigree")
+):
     """Resource class for a public pedigree published by the gnomAD project."""
 
 
-class GnomadPublicBlockMatrixResource(BlockMatrixResource, GnomadPublicResource):
+class GnomadPublicBlockMatrixResource(
+    BlockMatrixResource, GnomadPublicResource, read_resource_methods=("bm",)
+):
     """Resource class for a public Hail BlockMatrix published by the gnomAD project."""
 
 

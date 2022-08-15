@@ -10,10 +10,10 @@ from gnomad.resources.resource_utils import (
 from typing import Optional
 
 CURRENT_EXOME_RELEASE = ""
-CURRENT_GENOME_RELEASE = "3.1.1"
+CURRENT_GENOME_RELEASE = "3.1.2"
 CURRENT_GENOME_COVERAGE_RELEASE = "3.0.1"
 EXOME_RELEASES = []
-GENOME_RELEASES = ["3.0", "3.1", "3.1.1"]
+GENOME_RELEASES = ["3.0", "3.1", "3.1.1", "3.1.2"]
 GENOME_COVERAGE_RELEASES = GENOME_RELEASES + ["3.0.1"]
 DATA_TYPES = ["genomes"]
 
@@ -347,7 +347,8 @@ def coverage_tsv_path(data_type: str, version: Optional[str] = None) -> str:
                 f"Version {version} of gnomAD genomes for GRCh38 does not exist"
             )
 
-    return f"gs://gnomad-public-requester-pays/release/{version}/coverage/{data_type}/gnomad.{data_type}.r{version}.coverage.summary.tsv.bgz"
+    version_prefix = "r" if version.startswith("3.0") else "v"
+    return f"gs://gcp-public-data--gnomad/release/{version}/coverage/{data_type}/gnomad.{data_type}.{version_prefix}{version}.coverage.summary.tsv.bgz"
 
 
 def release_vcf_path(data_type: str, version: str, contig: str) -> str:
@@ -359,6 +360,11 @@ def release_vcf_path(data_type: str, version: str, contig: str) -> str:
     :param contig: Single contig "chr1" to "chrY"
     :return: Path to VCF
     """
+    if version.startswith("2"):
+        raise DataException(
+            f"gnomAD version {version} is not available on reference genome GRCh38"
+        )
+
     contig = f".{contig}" if contig else ""
     version_prefix = "r" if version.startswith("3.0") else "v"
-    return f"gs://gnomad-public-requester-pays/release/{version}/vcf/{data_type}/gnomad.{data_type}.{version_prefix}{version}.sites{contig}.vcf.bgz"
+    return f"gs://gcp-public-data--gnomad/release/{version}/vcf/{data_type}/gnomad.{data_type}.{version_prefix}{version}.sites{contig}.vcf.bgz"

@@ -60,33 +60,58 @@ See instructions in [docs/README.md](./docs/README.md).
 
 https://packaging.python.org/guides/distributing-packages-using-setuptools/#packaging-your-project
 
-- Install tools.
-
-  ```
-  python -m pip install --upgrade setuptools wheel twine
-  ```
-
-- Make sure that the [changelog](./CHANGELOG.md) is up to date.
-
-  To see changes since the last release, use:
-
-  ```
-  LAST_RELEASE_TAG=$(git tag --list --sort=-committerdate | head -n1)
-  git log $LAST_RELEASE_TAG..
-  ```
-
-- Update version in setup.py, replace "unreleased" heading in changelog with the version number, and commit.
+- Update version in setup.py and commit.
+  Push changes to the main branch on GitHub or submit a pull request.
   The new version number should be based on changes since the last release.
 
   https://semver.org/
 
   https://packaging.python.org/guides/distributing-packages-using-setuptools/#semantic-versioning-preferred
 
-- Tag the release in git.
+- Once the version has been updated in the main branch on GitHub, tag the release.
+  The version tag should be applied to a commit on the main branch.
+
+  The version number in the tag must match the version number in setup.py.
+
+  The tag can be created using GitHub by [creating a GitHub Release with a new tag](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
+
+  Alternatively, the tag can be created locally and pushed to GitHub using:
 
   ```
+  git checkout main
+  git pull
+
   git tag v<version>
   git push origin v<version>
+  ```
+
+- When a `v<VERSION_NUMBER>` tag is pushed to GitHub, an Actions workflow will automatically publish the tagged code to PyPI.
+
+  New releases will automatically be posted in the #gnomad_notifications Slack channel (via the RSS Slack app).
+
+- If the version tag was created locally and pushed to GitHub, then a [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) will be automatically created with
+  [release notes generated from pull requests](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes).
+
+  Check the [Releases page](https://github.com/broadinstitute/gnomad_methods/releases) to make sure the generated release notes look ok
+  and edit them if necessary.
+
+  If needed, to see commits since the last release, use:
+
+  ```
+  LAST_RELEASE_TAG=$(git tag --list --sort=-committerdate | head -n1)
+  git log $LAST_RELEASE_TAG..
+  ```
+
+  Especially if there are many changes in the release, organize the changelog by type.
+
+  See https://keepachangelog.com/en/1.0.0/#how for more information.
+
+### Manually publishing a release
+
+- Install tools.
+
+  ```
+  python -m pip install --upgrade setuptools wheel twine
   ```
 
 - Remove any old builds.
@@ -107,5 +132,3 @@ https://packaging.python.org/guides/distributing-packages-using-setuptools/#pack
   ```
   twine upload dist/*
   ```
-
-- Announce new release on Slack.

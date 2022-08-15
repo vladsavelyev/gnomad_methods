@@ -57,7 +57,11 @@ def pop_max_expr(
 
     :return: Popmax struct
     """
-    _pops_to_exclude = hl.literal(pops_to_exclude)
+    _pops_to_exclude = (
+        hl.literal(pops_to_exclude)
+        if pops_to_exclude is not None
+        else hl.empty_set(hl.tstr)
+    )
 
     # pylint: disable=invalid-unary-operand-type
     popmax_freq_indices = hl.range(0, hl.len(freq_meta)).filter(
@@ -169,7 +173,9 @@ def faf_expr(
     :return: (FAF expression, FAF metadata)
     """
     _pops_to_exclude = (
-        hl.literal(pops_to_exclude) if pops_to_exclude is not None else {}
+        hl.literal(pops_to_exclude)
+        if pops_to_exclude is not None
+        else hl.empty_set(hl.tstr)
     )
 
     # pylint: disable=invalid-unary-operand-type
@@ -515,7 +521,8 @@ def annotate_freq(
     freq_meta_expr.insert(1, {"group": "raw"})
     freq_sample_count.insert(1, freq_sample_count[0])
     mt = mt.annotate_globals(
-        freq_meta=freq_meta_expr, freq_sample_count=freq_sample_count,
+        freq_meta=freq_meta_expr,
+        freq_sample_count=freq_sample_count,
     )
 
     # Create frequency expression array from the sample groups
@@ -767,12 +774,7 @@ def annotation_type_is_numeric(t: Any) -> bool:
     :param t: Type to test
     :return: If the input type is numeric
     """
-    return (
-        isinstance(t, hl.tint32)
-        or isinstance(t, hl.tint64)
-        or isinstance(t, hl.tfloat32)
-        or isinstance(t, hl.tfloat64)
-    )
+    return t in (hl.tint32, hl.tint64, hl.tfloat32, hl.tfloat64)
 
 
 def annotation_type_in_vcf_info(t: Any) -> bool:
@@ -788,10 +790,11 @@ def annotation_type_in_vcf_info(t: Any) -> bool:
     """
     return (
         annotation_type_is_numeric(t)
-        or isinstance(t, hl.tstr)
-        or isinstance(t, hl.tarray)
-        or isinstance(t, hl.tset)
-        or isinstance(t, hl.tbool)
+        or t in (hl.tstr, hl.tbool)
+        or (
+            isinstance(t, (hl.tarray, hl.tset))
+            and annotation_type_in_vcf_info(t.element_type)
+        )
     )
 
 
